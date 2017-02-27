@@ -49,6 +49,10 @@
 #define QSEOS_VERSION_14		0x14
 #define QSEOS_CHECK_VERSION_CMD		0x00001803;
 
+#ifndef U32_MAX
+#define U32_MAX ((u32)(~0U))
+#endif
+
 enum qseecom_command_scm_resp_type {
 	QSEOS_APP_ID = 0xEE01,
 	QSEOS_LISTENER_ID
@@ -2295,7 +2299,11 @@ static long qseecom_ioctl(struct file *file, unsigned cmd,
 	case QSEECOM_IOCTL_SET_MEM_PARAM_REQ: {
 		data->type = QSEECOM_CLIENT_APP;
 		pr_debug("SET_MEM_PARAM: qseecom addr = 0x%x\n", (u32)data);
+		mutex_lock(&app_access_lock);
+		atomic_inc(&data->ioctl_count);
 		ret = qseecom_set_client_mem_param(data, argp);
+		atomic_dec(&data->ioctl_count);
+		mutex_unlock(&app_access_lock);
 		if (ret)
 			pr_err("failed Qqseecom_set_mem_param request: %d\n",
 								ret);
